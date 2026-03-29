@@ -1,0 +1,39 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Hangman Game (Windows)",
+            "type": "shell",
+            "command": "gcc",
+            "args": [
+                "src/main.c",
+                "src/msvcrt_compat.c",
+                "-o",
+                "hangman.exe",
+                "-Wall",
+                "-std=c99",
+                "-I./raylib/include",
+                "-L./raylib/lib",
+                "-lraylib",
+                "-lopengl32",
+                "-lgdi32",
+                "-lwinmm",
+                "-lm"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "Compiler gcc with raylib included"
+        },
+        {
+            "label": "Run Setup (Download Raylib)",
+            "type": "shell",
+            "command": ".\\setup.bat",
+            "problemMatcher": []
+        }
+    ]
+}
