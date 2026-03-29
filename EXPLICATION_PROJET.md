@@ -1,109 +1,175 @@
 # Guide d'Explication et de Soutenance : Mini-Projet Jeu du Pendu en C
 
-Ce guide a pour but de vous expliquer de A à Z le fonctionnement de votre projet, les concepts clés du langage C, et de vous préparer aux questions de votre professeur.
+Ce guide est un manuel ultra-détaillé conçu pour vous préparer à toute question de votre professeur. Il explique chaque concept de fond en comble, le "pourquoi" de chaque chose, la gestion de la mémoire, et fournit une large banque de questions/réponses.
 
 ---
 
 ## 1. Explication de l'Environnement et de l'IDE (Setup)
-Pour développer en langage C, nous avons besoin de deux choses principales :
-1. **Un Éditeur de texte (IDE) :** Comme *Visual Studio Code (VS Code)*, qui sert à écrire le code.
-2. **Un Compilateur :** Comme *GCC* (MinGW sur Windows), qui traduit le code que nous écrivons (compréhensible par un humain) en langage machine (des 0 et des 1 que l'ordinateur peut exécuter).
 
-**Configuration du projet :**
-Le projet utilise **Raylib**, une bibliothèque qui permet de dessiner facilement des choses à l'écran, de jouer des sons et de gérer la souris/clavier. Le compilateur prend vos fichiers `.c` et les lie avec les fichiers de Raylib pour créer un fichier exécutable (`.exe`).
+Pour développer en langage C, nous avons besoin de deux choses principales :
+1. **Un Éditeur de texte (IDE - Integrated Development Environment) :** Comme *Visual Studio Code (VS Code)*. C'est votre "cahier de brouillon" intelligent. Il colore le code pour le rendre lisible et souligne vos erreurs de syntaxe.
+2. **Un Compilateur :** Comme *GCC* (via MinGW sur Windows). L'ordinateur ne comprend pas le langage C, il ne comprend que le binaire (des `0` et des `1`). Le compilateur est le "traducteur" qui prend votre texte (code source) et le transforme en un fichier exécutable (.exe) compréhensible par la machine.
+
+**Pourquoi un `Makefile` ?**
+Imaginez que vous deviez taper `gcc src/main.c src/msvcrt_compat.c -o hangman.exe -I./raylib/include -L./raylib/lib -lraylib -lopengl32 -lgdi32 -lwinmm` à chaque fois que vous modifiez une ligne de code. C'est long et source d'erreurs. Le `Makefile` est un fichier de recette. Il dit à l'ordinateur : "Quand je tape 'make' ou que je lance la tâche, utilise cette longue commande pour tout assembler automatiquement".
 
 ---
 
 ## 2. Explication de tous les Fichiers du Projet
-Voici à quoi sert chaque fichier et dossier dans votre projet :
 
-* **`src/main.c`** : C'est le cœur de votre programme. Il contient la logique du jeu du pendu, l'affichage graphique, et la fonction `main()` qui est le point d'entrée du programme (là où l'exécution commence).
-* **`src/msvcrt_compat.c`** : C'est un fichier de compatibilité technique souvent utilisé sur Windows pour s'assurer que certaines fonctions standard du C (comme celles utilisées pour l'affichage ou la mémoire) fonctionnent correctement selon la version de Windows.
-* **`raylib/` et `raylib-5.0/`** : Ce sont les dossiers contenant tout le code de la bibliothèque graphique "Raylib". Ils fournissent les outils pour ouvrir une fenêtre et dessiner avec (comme `DrawText`, `InitWindow`).
-* **`Makefile`** : C'est un "scénario" d'assemblage. Au lieu de taper une longue ligne de commande `gcc ...` à chaque fois, le Makefile contient les instructions pour dire à l'ordinateur exactement comment compiler le jeu.
-* **`setup.bat`** : C'est un script pour Windows (un fichier batch) qui automatise l'installation ou la configuration initiale (par exemple, télécharger les bonnes versions de Raylib au besoin).
-* **`README.md`** : C'est le manuel d'utilisation de votre projet. C'est le premier fichier que les gens (ou votre professeur) lisent sur GitHub. Il explique comment installer et jouer au jeu.
-* **`header.h` (Concept - Ex: `raylib.h`)** : Un fichier `.h` (Header) contient les "signatures" ou "sommaires" des fonctions. Il ne contient pas le code en lui-même, mais dit au programme "*Hey, ces fonctions existent, et voici comment elles s'appellent*". Cela permet de partager des fonctions entre plusieurs fichiers `.c` sans tout copier-coller.
+* **`src/main.c`** : C'est le cœur de votre programme. Il contient la logique (les règles du jeu), l'affichage, et l'entrée principale (`main()`).
+* **`src/msvcrt_compat.c`** : Un fichier technique. Parfois, les versions de Windows ont des problèmes avec certaines fonctions de base du C (comme celles utilisées pour afficher du texte). Ce fichier est un "pansement" pour s'assurer que ça marche partout.
+* **`raylib/` et `raylib-5.0/`** : Ce sont les bibliothèques. Plutôt que de réinventer comment dessiner un pixel sur un écran ou comment lire une pression sur une touche (ce qui prendrait des milliers de lignes très complexes), on utilise le code de quelqu'un d'autre qui a déjà fait ce travail.
+* **`setup.bat`** : Un script Windows qui prépare le terrain (téléchargement/décompression de fichiers utiles au besoin).
+* **`README.md`** : La vitrine de votre projet sur GitHub. Il explique à n'importe quel visiteur à quoi sert ce projet, comment l'installer et comment y jouer. *L'extension .md veut dire "Markdown", un format pour mettre en gras, créer des listes et des titres facilement.*
+* **`*.h` (Fichiers Header)** : Un fichier d'en-tête (comme `raylib.h`). Imaginez que c'est le "sommaire" ou le "menu" d'un restaurant. Il liste toutes les fonctions existantes (ex: `DrawText`) sans contenir la recette (le code exact de la fonction). Cela permet à votre fichier `.c` de savoir que ces fonctions existent.
 
 ---
 
-## 3. Le Langage C de A à Z (Niveau Débutant)
-Le C est un langage "procédural". Le code est lu et exécuté ligne par ligne, de haut en bas.
-* **Variables :** Ce sont des "boîtes" dans lesquelles on stocke des données. 
-  * `int tries = 0;` (une boîte nommée 'tries' qui contient un nombre entier).
-  * `char letter = 'A';` (une boîte qui contient un seul caractère).
-* **Structures (`struct`) :** C'est une façon de regrouper plusieurs variables ensemble. Dans votre code, `GameState` regroupe toutes les infos du jeu (le mot, la difficulté, les essais restants) dans une seule "grosse boîte".
-* **Conditions (`if / else`) :** Permettent de faire des choix. *"Si (if) le joueur trouve la lettre, on la révèle, sinon (else) on perd un essai."*
-* **Boucles (`while / for`) :** Permettent de répéter des actions. La boucle principale `while (!WindowShouldClose())` tourne environ 60 fois par seconde pour dessiner les images du jeu tant qu'on ne ferme pas la fenêtre.
-* **Tableaux (`Arrays`) :** Une suite de boîtes du même type. Un mot comme "TEST" en C est un tableau de 5 lettres : `['T', 'E', 'S', 'T', '\0']` (le `\0` indique la fin du mot).
+## 3. Le Langage C de A à Z (Niveau Débutant, Explications Détaillées)
+
+Le C est un langage **impératif et procédural**. L'ordinateur lit votre code de haut en bas, ligne par ligne, strictement dans l'ordre que vous avez écrit.
+
+### 3.1 La syntaxe de base (Les symboles)
+* **Les instructions se terminent par un point-virgule `;`** : C'est comme le point à la fin d'une phrase. Si vous l'oubliez, l'ordinateur lira la ligne suivante comme formant une seule phrase avec la précédente, et il ne comprendra plus rien (Erreur Syntaxique).
+* **Les accolades `{ }`** : Elles définissent un "bloc" de code. Tout ce qui est entre `{` et `}` est un groupe. Par exemple, le contenu complet d'une fonction ou les actions d'une boucle doivent être contenus entre accolades.
+* **`#include <stdio.h>`** : Le `#` veut dire que c'est une "directive de préprocesseur". Avant même de traduire le code, l'ordinateur va chercher le fichier `stdio.h` (qui contient les fonctions standard d'Input/Output, comme `printf`) et l'inclure dans votre programme. Sans cela, vous n'avez pas d'outils de base.
+
+### 3.2 Les Variables (Les Boîtes)
+Pourquoi on les utilise ? Pour mémoriser des choses pendant que le programme tourne. 
+* **`int` (Integer)** : Pour les nombres entiers (ex: `int essais = 6;`).
+* **`char` (Character)** : Pour stocker UNE SEULE lettre (ex: `char lettre = 'A';`).
+* **`bool` (Boolean)** : Pour stocker une réponse "Vrai" ou "Faux" (`true` ou `false`). Très utile pour savoir si la partie est terminée (`bool gameWon = false;`).
+* **`float` / `double`** : Pour les nombres à virgule.
+
+### 3.3 Les Tableaux (Arrays) et Chaînes de caractères (Strings)
+* **Tableau (`int notes[5]`)** : Au lieu de créer 5 variables différentes (`note1`, `note2`, etc.), on crée une seule armoire à 5 tiroirs.
+* **Les mots en C (`char mot[] = "Salut";`)** : Le langage C n'a pas de vrai type "Texte". Pour lui, un texte est juste une suite (un tableau) de lettres (`char`). 
+* **La règle du `\0` (Caractère nul)** : Comment l'ordinateur sait-il qu'un mot est terminé ? Il ajoute toujours un caractère invisible appelé le terminateur (`\0`) à la fin. "CHAT" prend en fait 5 cases : `['C', 'H', 'A', 'T', '\0']`.
+
+### 3.4 Les Conditions (La Prise de Décision)
+Pourquoi on les utilise ? Parce qu'un bon programme ne fait pas toujours la même chose. Il réagit (au clavier, aux erreurs).
+* **`if` (Si)** : "Si la lettre tapée est bonne, ajoute-la au mot."
+* **`else if` / `else` (Sinon si / Sinon)** : "Sinon, diminue le nombre de vies."
+* **`switch / case`** : C'est une alternative au "if" quand on a beaucoup de possibilités précises à vérifier (ex: un menu avec Bouton 1, Bouton 2, Bouton 3).
+
+### 3.5 Les Boucles (Répétition Automatique)
+Pourquoi on les utilise ? Pour ne pas écrire 1000 fois la même ligne, ou pour faire tourner le jeu en continu.
+* **`while (...)` (Tant que)** : Répète une action TANT QU'une condition est vraie. *Ex : `while (!WindowShouldClose())` -> Tant qu'on n'a pas cliqué sur la croix rouge de la fenêtre, continue de dessiner le jeu 60 fois par seconde.* C'est ce qu'on appelle la **Game Loop**.
+* **`for (...)` (Pour)** : Pensez-y comme une boucle pour COMPTER. "Pour i allant de 0 à la longueur du mot, vérifie chaque lettre".
+
+### 3.6 Les Fonctions
+Pourquoi on les utilise ? Pour ne pas avoir un fichier `.c` de 5000 lignes impossible à lire. On regroupe un ensemble logique d'instructions (ex: `StartSession()`, `DrawModernButton()`) auquel on donne un nom. Ensuite, il suffit d'appeler ce nom. Ça rend le code lisible et réutilisable.
+
+### 3.7 Les Structures (`struct`)
+Notre `struct GameState` est comme la création d'un NOUVEAU type de donnée personnalisé. C'est créer un "Sac à dos" global qui contient toutes les poches nécessaires : Le mot à trouver (char*), les essais restants (int), l'état du jeu (bool). Au lieu de trimballer 10 variables séparées dans toutes nos fonctions, on ne passe que le sac à dos `GameState`.
 
 ---
 
-## 4. Gestion de la Mémoire et Pointeurs (Très Important !)
-Votre professeur vous posera sûrement des questions là-dessus. En C, on doit gérer la mémoire vive (RAM) de l'ordinateur nous-mêmes.
+## 4. Gestion de la Mémoire (Stack vs Heap) et Pointeurs
 
-**C'est quoi un pointeur ?**
-Imaginez que la RAM est une grande rue avec des maisons (la mémoire). 
-* Une **variable**, c'est ce qu'il y a *à l'intérieur* de la maison.
-* Un **pointeur**, c'est *l'adresse* de la maison (ex: "15 rue de la Paix"). Le pointeur ne contient pas la valeur, il indique **où** elle se trouve. En C, on le note avec une étoile `*` (ex: `GameState* game`).
+C'est LE sujet principal en C, et c'est ce qui le différencie de langages plus simples comme Python ou Java.
 
-**Allocation Dynamique (`malloc`, `calloc`) :**
-Quand vous avez écrit `InitGame()` :
-```c
-GameState* game = (GameState*)malloc(sizeof(GameState));
-game->guessedWord = (char*)calloc(MAX_WORD_LENGTH, sizeof(char));
-```
-* **`malloc` (Memory Allocation) :** Demande à Windows : *"Réserve-moi un espace dans la mémoire de la taille exacte d'un `GameState`"*.
-* **`calloc` (Contiguous Allocation) :** Pareil que malloc, mais il a l'avantage de mettre toutes les cases à zéro (nettoie la mémoire) pour éviter les bugs.
-* **Pourquoi on fait ça ?** Au lieu de créer la mémoire temporairement à chaque frame du jeu, on crée un bloc persistant dans la mémoire que l'on manipule en lui envoyant notre "adresse" (le pointeur).
-* **Règle d'or :** Tout ce qui est alloué avec `malloc`/`calloc` doit être détruit avec `free(game);` à la fin, sinon c'est ce qu'on appelle une **fuite de mémoire (memory leak)**. L'ordinateur finit par saturer sa RAM et planter.
+### La Mémoire "Stack" (La pile - Automatique)
+Quand vous créez une variable normale `int a = 5;` dans une fonction, elle va dans la mémoire "Stack". C'est petit, rapide, et surtout : **elle est détruite automatiquement** dès que la fonction se termine.
+
+### La Mémoire "Heap" (Le tas - Manuelle)
+Quand on a besoin de stocker de gros éléments (comme les informations globales du jeu) qui doivent survivre même quand la fonction d'initialisation se termine, on utilise le "Heap". Mais dans le Heap, c'est **vous** le patron : l'ordinateur ne supprime jamais rien tout seul.
+
+### Les Pointeurs (`*`)
+Puisque la variable est dans le "Heap", pour la retrouver depuis n'importe où, il nous faut son "adresse postale" dans la RAM (ex: emplacement `0x7A4F2`). Un pointeur n'est rien d'autre que ça : une variable spéciale qui stocke une **adresse mémoire** plutôt qu'une valeur.
+Exemple : `GameState* game` -> "game" pointe vers l'adresse d'un espace contenant notre partie.
+
+### Les Outils de la Mémoire Manuelle
+1. **`malloc` (Memory Allocation) :**
+   * *Rôle :* Allouer de l'espace. On dit : "Donne-moi X octets de mémoire dans le Heap".
+   * *Problème :* Il vous donne le bloc mais ne le nettoie pas. S'il y avait des résidus d'anciens programmes, ils y sont encore ("garbage memory").
+2. **`calloc` (Contiguous Allocation) :**
+   * *Rôle :* Fait la même chose que malloc, mais il passe un "coup de balai" et met toutes les cases à ZÉRO.
+   * *Où l'a-t-on utilisé ?* Pour le `guessedWord` et `guessedLetters`. On veut être absolument sûr que ces tableaux sont vides de tout résidu avant de commencer à compter les fautes.
+3. **`realloc` (Re-Allocation) :**
+   * *Rôle :* Vous avez demandé 10 cases mémoires, mais finalement il vous en faut 20 (Imaginez un jeu où vous rajoutez des ennemis à l'infini). L'ordinateur ne peut pas juste ajouter 10 cases à côté (la place pourrait être occupée par le navigateur web). `realloc` prend votre bloc, trouve un endroit plus grand où il y a 20 cases de libres, copie tout dans le nouvel endroit, et libère l'ancien.
+   * *Exemple :* `ptr = realloc(ptr, nouvelle_taille);`
+4. **`free` (La libération) :**
+   * Le passage obligatoire ! Tout bloc demandé par `malloc`, `calloc` ou `realloc` DOIT être rendu au système avec `free(pointeur)` avant de fermer le programme. Si vous ne le faites pas, ça crée une **Fuite de Mémoire (Memory Leak)**. Votre jeu consommera de la RAM à l'infini jusqu'à faire planter l'ordinateur.
 
 ---
 
-## 5. Logique Algorithmique du Pendu
-La logique principale repose sur de grands blocs (ou "États") :
-1. **Initialisation :** Choisir un mot au hasard selon la difficulté sélectionnée. Le mot est rempli de tirets `_ _ _ _`.
-2. **La Boucle de jeu (Frame Loop) :**
-   * Elle vérifie si une touche du clavier est pressée.
-   * Si la touche (ex: 'A') est dans le mot caché, on remplace le `_` par `A`.
-   * Sinon, on augmente le compteur d'erreurs (`game->tries++`).
-3. **Conditions de Fin (Game Over / Win) :**
-   * Si `tries` arrive à la limite (6), c'est Perdu (`game->gameOver = true`).
-   * Si le mot dévoilé est complètement égal au mot secret, c'est Gagné (`game->gameWon = true`).
+## 5. Logique Algorithmique du Pendu (L'algorithme étape par étape)
+
+1. **Le Tirage au sort :** `srand(time(NULL))` génère une "graine" aléatoire basée sur l'heure de votre ordinateur. Ensuite, `rand() % 8` choisit un chiffre entre 0 et 7 pour sélectionner un mot au hasard dans nos tableaux.
+2. **La Saisie Utilisateur :** La boucle lit le clavier (`GetCharPressed()`).
+3. **Le Traitement (La Logique) :**
+   * Est-ce que cette lettre fait partie du mot secret ?
+   * Si **OUI** : On parcourt tout le mot secret, et on remplace les "_" dans l'affichage par la lettre tapée.
+   * Si **NON** : On ajoute +1 à la variable "fautes / essais" (`game->tries++`).
+4. **Les Conditions de Victoire :**
+   * On compare le mot que l'utilisateur a rempli avec le mot secret (avec `strcmp`). S'ils sont identiques (résultat = 0), `gameWon = true`.
+   * Si les "essais" atteignent la constante globale `MAX_TRIES` (6), le bonhomme est entièrement dessiné, `gameOver = true`.
 
 ---
 
 ## 6. Raylib vs GTK
-* **Raylib :** C'est une bibliothèque conçue principalement pour faire des **Jeux Vidéo**. Elle dessine directement sur la "carte graphique" pixel par pixel. Elle est simple, légère, et parfaite pour dessiner des formes (des ronds, des carrés, le bonhomme du pendu) et gérer 60 images par seconde.
-* **GTK :** C'est une bibliothèque conçue pour créer des **Logiciels de Bureau** (Bureautique). Avec GTK, on crée des boutons "natifs", des listes déroulantes, des menus cliquables. Ce n'est pas fait pour afficher 60 images par secondes ni pour créer de la logique de jeu fluide, c'est fait pour que l'interface ressemble aux applications système (comme Word ou le gestionnaire de fichiers).
+
+* **Raylib (Temps Réel / Multimédia) :** Raylib tourne en boucle infinie (environ 60 ou 144 "tours" par seconde). À chaque tour, on efface l'écran et on redessine tout à zéro (le texte, le pendu, les boutons). C'est parfait pour un jeu vidéo pour animer des éléments et capter le clavier à la vitesse de la lumière. Elle accède directement à l'accélération matérielle (OpenGL).
+* **GTK (Logiciels / Interfaces Événementielles) :** GTK (GIMP Toolkit) sert à dessiner des fenêtres "normales" (comme Word, Excel ou votre explorateur). Elle ne s'actualise pas 60 fois par seconde. Elle "dort" jusqu'à ce que vous cliquiez sur un bouton (on appelle ça de la programmation pilotée par l'événement "Event-Driven"). Pour un pendu en console ou en "logiciel", GTK est possible mais pour du dessin dynamique et fun, Raylib est 100x mieux adapté.
 
 ---
 
-## 7. Questions Possibles du Professeur et Réponses
+## 7. Préparation à la Soutenance : +25 Questions et Réponses Possibles
 
-### Niveau Facile (Niveau "Est-ce qu'il comprend son code ?")
-**Q1 : Quelle est la fonction principale par laquelle le programme commence ?**
-*Réponse :* C'est la fonction `main()`. C'est le point de départ de tout programme C.
+### Niveau Facile (Bases du C)
+1. **Que fait `#include` ?**
+   *Il importe des fonctions prédéfinies depuis d'autres fichiers/bibliothèques pour qu'on puisse les utiliser, comme inclure des outils de base dans une boîte.*
+2. **C'est quoi la fonction `main()` ?**
+   *C'est le point d'entrée unique de mon programme. Sans elle, Windows ne saurait pas par où commencer.*
+3. **À quoi servent les accolades `{}` ?**
+   *Elles délimitent un bloc de code. Elles disent au compilateur que toutes ces lignes appartiennent au même `if`, à la même fonction ou à la même boucle.*
+4. **Pourquoi as-tu utilisé `int` pour les "tries" (essais) au lieu de `float` ?**
+   *Parce que le nombre d'essais est obligatoirement un nombre entier. On ne peut pas commettre 2.5 erreurs.*
+5. **Quelle est la différence entre `=` et `==` ?**
+   *Un seul `=` sert à "affecter" (donner) une valeur (ex: `vies = 5`). Le double `==` sert à COMPARER deux choses dans une condition (ex: `if (vies == 0)`).*
+6. **Que signifie l'opérateur `||` et `&&` ?**
+   *`||` signifie "OU" (l'une ou l'autre condition doit être vraie). `&&` signifie "ET" (les deux à la fois).*
+7. **Que fait une boucle `while` ?**
+   *Elle répète l'exécution d'un bloc de code tant qu'une condition reste vraie.*
+8. **Pourquoi as-tu défini des constantes avec `#define MAX_TRIES 6` ?**
+   *C'est plus facile à lire et à modifier. Si je veux passer à 10 essais, je change juste le haut du fichier au lieu de chercher tous les "6" éparpillés dans mon code.*
 
-**Q2 : À quoi sert l'instruction `#include "raylib.h"` au début de ton fichier ?**
-*Réponse :* Elle charge l'en-tête de la bibliothèque Raylib, ce qui me donne le droit d'utiliser des fonctions de la bibliothèque comme `DrawText` ou `InitWindow`.
+### Niveau Intermédiaire (Logique, Tableaux, C standard)
+9. **Quelle est la différence entre un tableau (array) et un pointeur ?**
+   *Un tableau est une réservation fixe de cases mémoires consécutives. Un pointeur est juste une variable qui stocke l'adresse d'une case mémoire (qui peut pointer vers le début d'un tableau).*
+10. **Dans tes mots cachés, les lettres sont des tableaux de caractères. Que se cache-t-il à la fin de chaque mot et pourquoi ?**
+    *Le caractère Nul (`\0`). Il est indispensable pour dire aux fonctions comme `printf` ou `strcmp` : "Arrête-toi, le texte est fini ici".*
+11. **Que fait la fonction `strcmp` ?**
+    *(String Compare). Elle prend deux chaînes de caractères et les compare. Si elles sont identiques, elle renvoie 0.*
+12. **Comment l'ordinateur fait-il du hasard ? Que fait `srand(time(NULL))` ?**
+    *L'ordinateur n'a pas de vrai hasard, il génère des suites de nombres via des maths. `srand(time(NULL))` donne l'heure exacte en secondes (depuis 1970) comme "graine de départ" pour être sûr d'avoir un tirage "aléatoire" différent à chaque partie.*
+13. **Comment passes-tu l'état du jeu (`GameState`) aux fonctions ?**
+    *Je le passe par "pointeur" (`StartSession(GameState* game)`). Cela permet à la fonction de modifier le "vrai" état du jeu directement dans la mémoire, et ça m'évite de recréer une grosse copie très lourde.*
+14. **Qu'est-ce qu'une Structure (`struct`) ?**
+    *C'est la création d'un "type" de données composé. Cela regroupe plusieurs variables différentes (int, char, bool) de manière logique sous un même toit.*
+15. **Qu'est-ce que "l'allocation dynamique" ?**
+    *C'est demander au système d'exploitation de nous allouer de la mémoire dans le "Tas" (Heap) PENDANT que le programme tourne, contrairement à l'allocation statique qui est définie à la compilation.*
+16. **Si j'utilise `fgets` ou `scanf("%s")`, pourquoi il y a un problème avec les espaces ou le dernier caractère ?**
+    *`scanf("%s")` s'arrête au premier bloc d'espace, et ça peut laisser un retour à la ligne (`\n`) dans le "buffer" (la zone d'attente du clavier), ce qui crée des bugs dans la lecture suivante.*
 
-**Q3 : Comment sais-tu que le joueur a perdu ?**
-*Réponse :* Je vérifie si la variable `game->tries` a atteint la constante `MAX_TRIES` (qui vaut 6).
-
-### Niveau Intermédiaire (Niveau "Est-ce qu'il comprend la logique ?")
-**Q1 : Pourquoi as-tu utilisé une `struct` pour l'état du jeu (`GameState`) ?**
-*Réponse :* Pour regrouper toutes les informations liées au jeu (Le mot, les essais, l'état victoire/défaite) dans un seul "objet". C'est plus propre que d'avoir 10 variables éparpillées partout dans mon code. 
-
-**Q2 : Quelle est la différence entre `malloc` et `calloc` ?**
-*Réponse :* `malloc` (Memory Allocation) donne un bloc de mémoire mais ne le nettoie pas (il peut y avoir des "déchets" résiduels d'anciens programmes). `calloc` (Contiguous Allocation) donne un bloc de mémoire et initialise tout à zéro. J'utilise `calloc` pour mes lettres devinées afin d'être sûr que mon tableau est bien vide au début.
-
-### Niveau Difficile (Niveau "Maitrise Totale")
-**Q1 : Tu as alloué de la mémoire dynamiquement dans `InitGame()`, as-tu utilisé `free()` ? Que se passe-t-il si tu ne le fais pas ?**
-*Réponse :* Oui, il faut libérer la mémoire à la fin du programme avec `free(game)`. Si on ne le fait pas, cela crée une "fuite de mémoire" (Memory Leak). L'ordinateur croira que cette RAM est toujours utilisée même après la fermeture du jeu.
-
-**Q2 : Pourquoi utiliser des pointeurs (`GameState* game`) au lieu d'une simple variable locale (`GameState game`) ?**
-*Réponse :* Parce qu'on veut que notre état de jeu persiste tout au long de l'éxécution du programme et qu'on veut pouvoir le modifier de n'importe où dans différentes fonctions sans avoir à le copier entièrement à chaque appel de fonction (ce qui consommerait beaucoup plus de mémoire et ralentirait le programme).
-
-**Q3 : Pourquoi Raylib est plus adapté que GTK pour ton Pendu ?**
-*Réponse :* Raylib tourne sur une "gameloop" (boucle infinie) continue, idéale pour gérer des graphismes en temps réel et des entrées clavier très rapides dans un contexte de jeu de type "canevas". GTK est "event-driven" (piloté par l'événement), ce qui veut dire qu'il ne s'actualise que quand on clique, ce qui est parfait pour un logiciel, mais très lourd et inadapté pour un jeu.
+### Niveau Difficile (Mémoire avancée et architecture)
+17. **C'est quoi la différence profonde entre `malloc` et `calloc` ?**
+    *`malloc` réserve la mémoire brut sans y toucher (plus rapide mais potentiellement sale). `calloc` prend du temps supplémentaire pour écrire des zéros dans toute la zone réservée (sécurisé pour éviter les bugs).*
+18. **Explique le fonctionnement exact de `realloc` dans le système.**
+    *Si je demande un `realloc(pointeur, taille_plus_grande)`, le système regarde s'il y a de la place libre juste après le bloc actuel. S'il n'y en a pas, il cherche un tout nouvel espace ailleurs, copie mon ancien bloc dans ce nouvel espace, supprime l'ancien, et me donne la nouvelle adresse.*
+19. **Qu'est-ce qu'une fuite de mémoire (Memory Leak) ?**
+    *C'est allouer de l'espace avec `malloc` ou `calloc`, et oublier d'utiliser `free()` avant de fermer le programme. Cette mémoire devient "inatteignable" par notre code, mais l'OS la croit utilisée, ce qui baisse la RAM disponible de l'ordinateur.*
+20. **Que se passe-t-il si on utilise `free()` sur un bloc, puis qu'on cherche à y accéder à nouveau ?**
+    *C'est ce qu'on appelle un **"Dangling Pointer"** (Pointeur fou/Pendant). L'accès à une zone libérée mène généralement un crash instantané du programme (Segmentation Fault ou Segfault).*
+21. **Si on utilise `free(ptr)` deux fois de suite, que se passe-t-il ? (Double free)**
+    *Faire un "Double Free" corrompt la gestion de la mémoire du système et provoque généralement un crash brutal de l'application (Segfault).*
+22. **Quelle est la "Pile" (Stack) vs le "Tas" (Heap) ?**
+    *La Pile stocke l'historique d'appels des fonctions et les variables locales, c'est très rapide mais sa taille est limitée (~1 à 8 MO) et la destruction est automatique. Le Tas est la mémoire géante (des Gigaoctets de RAM), gérée manuellement par le programmeur (`malloc`).*
+23. **Pouvais-tu faire ton jeu sans pointeur pour struct ? Pourquoi t'embêter avec `malloc` ici ?**
+    *Techniquement, pour un jeu si petit, un `GameState` déclaré en variable locale ou globale (statique) aurait fonctionné. Mais utiliser `malloc` montre que je maîtrise la gestion complète du cycle de vie d'un objet (Instanciation, Modification, Destruction), indispensable pour des projets plus massifs.*
+24. **C'est quoi un "Segmentation Fault" ou "Violation d'accès" ?**
+    *C'est l'erreur la plus commune en C. Cela arrive quand mon programme essaie d'accéder à une case mémoire (pointeur) qui ne lui appartient pas, ou qui est nulle (`NULL`), ou déjà détruite. Le système d'exploitation tue le programme par sécurité.*
+25. **Dans la boucle Raylib, que font `BeginDrawing()` et `EndDrawing()` ?**
+    *Dans un jeu vidéo, on est dans l'architecture matérielle de la carte graphique (appelée le Double Buffering). `BeginDrawing` prévient qu'on commence un nouveau cadre (Frame) en cache. `EndDrawing` dit à la carte graphique d'afficher d'un seul coup tout ce qu'on vient de dessiner vers l'écran de l'utilisateur. Ca évite le clignotement de l'écran.*
