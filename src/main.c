@@ -8,6 +8,9 @@
 
 #define MAX_WORD_LENGTH 50
 #define MAX_TRIES 6
+#define WORDS_PER_LEVEL 8
+#define BASE_WIDTH 800.0f
+#define BASE_HEIGHT 450.0f
 
 typedef enum { SCREEN_MENU, SCREEN_LEVEL, SCREEN_PLAYING } GameScreen;
 typedef enum { LEVEL_EASY, LEVEL_MEDIUM, LEVEL_HARD } DifficultyLevel;
@@ -28,6 +31,14 @@ typedef struct {
     int tries;
     bool gameWon;
     bool gameOver;
+    float startTime;
+    float endTime;
+    bool isPaused;
+    float pauseStartTime;
+    float totalPausedTime;
+    int score;
+    int gamesPlayed;
+    int gamesWon;
 } GameState;
 
 // Word lists
@@ -48,37 +59,62 @@ WordWithHint medWords[] = {
 WordWithHint hardWords[] = {
     { "quiz", "A test of knowledge, especially a brief one" }, { "flux", "Continuous change" },
     { "lynx", "A wild cat with yellowish-brown fur" }, { "zany", "Amusingly unconventional and idiosyncratic" },
-    { "jinx", "A person or thing that brings bad luck" }, { "vowd", "An extremely rare word (Hard!)" },
+    { "jinx", "A person or thing that brings bad luck" }, { "vowed", "Promised solemnly" },
     { "glyph", "A hieroglyphic character or symbol" }, { "wisp", "A small thin or twisted bunch, piece, or amount" }
 };
 
+typedef struct {
+    WordWithHint* words;
+    int count;
+    const char* name;
+} WordCategory;
+
+WordCategory categories[] = {
+    { easyWords, 8, "Easy" },
+    { medWords, 8, "Medium" },
+    { hardWords, 8, "Hard" }
+};
+
 // Modern Colors (Dark Mode style)
-Color bgDark = { 15, 23, 42, 255 };          // Slate 900
-Color primaryColor = { 56, 189, 248, 255 };  // Sky 400
-Color primaryHover = { 125, 211, 252, 255 }; // Sky 300
-Color textLight = { 248, 250, 252, 255 };    // Slate 50
-Color drawColor = { 148, 163, 184, 255 };    // Slate 400
-Color errorColor = { 244, 63, 94, 255 };     // Rose 500
-Color successColor = { 34, 197, 94, 255 };   // Green 500
+Color bgDark = { 15, 23, 42, 255 };
+Color primaryColor = { 56, 189, 248, 255 };
+Color primaryHover = { 125, 211, 252, 255 };
+Color textLight = { 248, 250, 252, 255 };
+Color drawColor = { 148, 163, 184, 255 };
+Color errorColor = { 244, 63, 94, 255 };
+Color successColor = { 34, 197, 94, 255 };
 
 GameState* InitGame() {
     GameState* game = (GameState*)malloc(sizeof(GameState));
+    if (!game) return NULL;
+    
     game->guessedWord = (char*)calloc(MAX_WORD_LENGTH, sizeof(char));
+    if (!game->guessedWord) {
+        free(game);
+        return NULL;
+    }
+    
     game->guessedLetters = (bool*)calloc(26, sizeof(bool));
+    if (!game->guessedLetters) {
+        free(game->guessedWord);
+        free(game);
+        return NULL;
+    }
+    
     game->screen = SCREEN_MENU;
     game->difficulty = LEVEL_EASY;
+    game->score = 0;
+    game->gamesPlayed = 0;
+    game->gamesWon = 0;
     srand(time(NULL));
     return game;
 }
 
 void StartSession(GameState* game) {
-    WordWithHint* list = easyWords;
-    if(game->difficulty == LEVEL_MEDIUM) list = medWords;
-    if(game->difficulty == LEVEL_HARD) list = hardWords;
-
-    int idx = rand() % 8; // 8 words per category
-    game->secretWord = list[idx].word;
-    game->hint = list[idx].hint;
+    WordCategory* cat = &categories[game->difficulty];
+    int idx = rand() % cat->count;
+    game->secretWord = cat->words[idx].word;
+    game->hint = cat->words[idx].hint;
     game->wordLength = strlen(game->secretWord);
     
     memset(game->guessedWord, 0, MAX_WORD_LENGTH);
@@ -86,22 +122,63 @@ void StartSession(GameState* game) {
     game->tries = 0;
     game->gameWon = false;
     game->gameOver = false;
+    game->isPaused = false;
+    game->totalPausedTime = 0.0f;
+    game->pauseStartTime = 0.0f;
+    game->startTime = GetTime();
+    game->gamesPlayed++;
 }
 
-// Function to draw modern rounded buttons
+void ProcessGuess(GameState* game, char guess) {
+    if (game->guessedLetters[guess - 'a']) return;
+    
+    game->guessedLetters[guess - 'a'] = true;
+    bool found = false;
+    
+    for (int i = 0; i < game->wordLength; i++) {
+        if (game->secretWord[i] == guess) {
+            found = true;
+            game->guessedWord[i] = guess;
+        }
+    }
+    
+    if (!found) {
+        game->tries++;
+    } else {
+        // نقاط إضافية للحروف الصحيحة
+        game->score += 10;
+    }
+    
+    if (strcmp(game->secretWord, game->guessedWord) == 0) {
+        game->gameWon = true;
+        game->endTime = GetTime();
+        game->gamesWon++;
+        // نقاط إضافية للفوز السريع
+        float timeTaken = game->endTime - game->startTime - game->totalPausedTime;
+        int timeBonus = (int)((30.0f - timeTaken) * 5);
+        if (timeBonus > 0) game->score += timeBonus;
+        game->score += (MAX_TRIES - game->tries) * 20;
+    }
+    
+    if (game->tries >= MAX_TRIES) {
+        game->gameOver = true;
+        game->endTime = GetTime();
+    }
+}
+
 bool DrawModernButton(Rectangle bounds, const char* text, Vector2 mousePoint) {
     bool clicked = false;
     bool isHover = CheckCollisionPointRec(mousePoint, bounds);
 
     if (isHover) {
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-            DrawRectangleRounded(bounds, 0.3f, 10, primaryColor); // Pressed
+            DrawRectangleRounded(bounds, 0.3f, 10, primaryColor);
         } else {
-            DrawRectangleRounded(bounds, 0.3f, 10, primaryHover); // Hover
+            DrawRectangleRounded(bounds, 0.3f, 10, primaryHover);
         }
         if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) clicked = true;
     } else {
-        DrawRectangleRounded(bounds, 0.3f, 10, primaryColor); // Normal
+        DrawRectangleRounded(bounds, 0.3f, 10, primaryColor);
     }
 
     DrawRectangleRoundedLines(bounds, 0.3f, 10, 2, textLight);
@@ -111,146 +188,237 @@ bool DrawModernButton(Rectangle bounds, const char* text, Vector2 mousePoint) {
     return clicked;
 }
 
+bool DrawGreyButton(Rectangle bounds, const char* text, Vector2 mousePoint) {
+    bool clicked = false;
+    bool isHover = CheckCollisionPointRec(mousePoint, bounds);
+    Color cloudGreyBase = { 156, 163, 175, 255 };
+    Color cloudGreyHover = { 209, 213, 219, 255 };
+
+    if (isHover) {
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            DrawRectangleRounded(bounds, 0.3f, 10, cloudGreyBase);
+        } else {
+            DrawRectangleRounded(bounds, 0.3f, 10, cloudGreyHover);
+        }
+        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) clicked = true;
+    } else {
+        DrawRectangleRounded(bounds, 0.3f, 10, cloudGreyBase);
+    }
+
+    DrawRectangleRoundedLines(bounds, 0.3f, 10, 2, textLight);
+    int textW = MeasureText(text, 16);
+    DrawText(text, bounds.x + bounds.width/2 - textW/2, bounds.y + bounds.height/2 - 8, 16, bgDark);
+    
+    return clicked;
+}
+
+void DrawHangman(GameState* game) {
+    DrawLineEx((Vector2){150, 100}, (Vector2){150, 350}, 6, drawColor);
+    DrawLineEx((Vector2){147, 100}, (Vector2){300, 100}, 6, drawColor);
+    DrawLineEx((Vector2){300, 97}, (Vector2){300, 140}, 6, drawColor);
+    
+    if (game->tries > 0) {
+        DrawCircle(300, 170, 30, errorColor);
+        DrawCircle(300, 170, 24, bgDark);
+        DrawCircleLines(300, 170, 30, errorColor);
+    }
+    if (game->tries > 1) DrawLineEx((Vector2){300, 200}, (Vector2){300, 280}, 6, errorColor);
+    if (game->tries > 2) DrawLineEx((Vector2){300, 220}, (Vector2){250, 260}, 6, errorColor);
+    if (game->tries > 3) DrawLineEx((Vector2){300, 220}, (Vector2){350, 260}, 6, errorColor);
+    if (game->tries > 4) DrawLineEx((Vector2){300, 280}, (Vector2){250, 330}, 6, errorColor);
+    if (game->tries > 5) DrawLineEx((Vector2){300, 280}, (Vector2){350, 330}, 6, errorColor);
+}
+
+void DrawWord(GameState* game) {
+    int startX = 400;
+    for (int i = 0; i < game->wordLength; i++) {
+        if (game->guessedWord[i] != '\0') {
+            DrawText(TextFormat("%c", toupper(game->guessedWord[i])), startX + i * 40, 260, 40, primaryColor);
+        }
+        DrawLineEx((Vector2){startX + i*40, 305}, (Vector2){startX + 30 + i*40, 305}, 4, textLight);
+    }
+}
+
+void DrawHint(GameState* game) {
+    DrawText("HINT:", 400, 100, 20, primaryColor);
+    DrawText(game->hint, 400, 130, 20, textLight);
+}
+
+void DrawGuessedLetters(GameState* game) {
+    DrawText("GUESSED:", 400, 180, 20, drawColor);
+    int gx = 400;
+    int gy = 210;
+    for(int i = 0; i < 26; i++){
+        if(game->guessedLetters[i]){
+            DrawText(TextFormat("%c", 'A' + i), gx, gy, 20, errorColor);
+            gx += 25;
+            if (gx > 700) { gx = 400; gy += 25; }
+        }
+    }
+}
+
+void DrawStats(GameState* game) {
+    DrawText(TextFormat("Score: %d", game->score), 150, 20, 20, textLight);
+    DrawText(TextFormat("Games Won: %d/%d", game->gamesWon, game->gamesPlayed), 150, 45, 20, textLight);
+    
+    float elapsed;
+    if (!game->gameOver && !game->gameWon) {
+        elapsed = GetTime() - game->startTime - game->totalPausedTime;
+        if (game->isPaused) {
+            elapsed = game->pauseStartTime - game->startTime - game->totalPausedTime;
+        }
+    } else {
+        elapsed = game->endTime - game->startTime - game->totalPausedTime;
+    }
+    DrawText(TextFormat("Time: %.0fs", elapsed), 150, 70, 20, textLight);
+}
+
+void UpdateGameLogic(GameState* game) {
+    if (game->gameOver || game->gameWon || game->isPaused) return;
+    
+    int key = GetKeyPressed();
+    if (key >= KEY_A && key <= KEY_Z) {
+        ProcessGuess(game, tolower((char)key));
+    }
+}
+
+void DrawMenuScreen(GameState* game, Vector2 mousePoint) {
+    int titleW = MeasureText("HANGMAN", 60);
+    DrawText("HANGMAN", 400 - titleW/2, 100, 60, primaryColor);
+    
+    int subtitleW = MeasureText("Modern Edition", 20);
+    DrawText("Modern Edition", 400 - subtitleW/2, 170, 20, textLight);
+
+    Rectangle btnStart = { 400 - 100, 240, 200, 50 };
+    if (DrawModernButton(btnStart, "START GAME", mousePoint)) {
+        StartSession(game);
+        game->screen = SCREEN_PLAYING;
+    }
+
+    Rectangle btnLevel = { 400 - 100, 310, 200, 50 };
+    if (DrawModernButton(btnLevel, "LEVELS", mousePoint)) {
+        game->screen = SCREEN_LEVEL;
+    }
+    
+    // إحصائيات سريعة في القائمة الرئيسية
+    if (game->gamesPlayed > 0) {
+        DrawText(TextFormat("Total Score: %d", game->score), 400 - 100, 380, 20, drawColor);
+        DrawText(TextFormat("Win Rate: %d%%", (game->gamesWon * 100) / game->gamesPlayed), 400 - 100, 405, 20, drawColor);
+        
+        Rectangle btnClear = { 500, 380, 100, 40 };
+        if (DrawModernButton(btnClear, "CLEAR", mousePoint)) {
+            game->score = 0;
+            game->gamesPlayed = 0;
+            game->gamesWon = 0;
+        }
+    }
+}
+
+void DrawLevelScreen(GameState* game, Vector2 mousePoint) {
+    int titleW = MeasureText("SELECT DIFFICULTY", 40);
+    DrawText("SELECT DIFFICULTY", 400 - titleW/2, 80, 40, textLight);
+
+    Rectangle btnEasy = { 400 - 100, 160, 200, 50 };
+    Rectangle btnMed = { 400 - 100, 230, 200, 50 };
+    Rectangle btnHard = { 400 - 100, 300, 200, 50 };
+    Rectangle btnBack = { 400 - 100, 380, 200, 50 };
+
+    if (DrawModernButton(btnEasy, game->difficulty == LEVEL_EASY ? "EASY (Selected)" : "EASY", mousePoint)) 
+        game->difficulty = LEVEL_EASY;
+    if (DrawModernButton(btnMed, game->difficulty == LEVEL_MEDIUM ? "MEDIUM (Selected)" : "MEDIUM", mousePoint)) 
+        game->difficulty = LEVEL_MEDIUM;
+    if (DrawModernButton(btnHard, game->difficulty == LEVEL_HARD ? "HARD (Selected)" : "HARD", mousePoint)) 
+        game->difficulty = LEVEL_HARD;
+    
+    if (DrawModernButton(btnBack, "BACK TO MENU", mousePoint)) {
+        game->screen = SCREEN_MENU;
+    }
+}
+
+void DrawPlayingScreen(GameState* game, Vector2 mousePoint) {
+    UpdateGameLogic(game);
+    
+    DrawHangman(game);
+    DrawWord(game);
+    DrawHint(game);
+    DrawGuessedLetters(game);
+    DrawStats(game);
+
+    if (game->gameOver || game->gameWon) {
+        int startX = 400;
+        if (game->gameOver) {
+            DrawText("GAME OVER!", startX, 335, 30, errorColor);
+            DrawText(TextFormat("Answer: %s", game->secretWord), startX, 375, 20, textLight);
+        } else {
+            DrawText("YOU WON!", startX, 335, 30, successColor);
+            float timeTaken = game->endTime - game->startTime - game->totalPausedTime;
+            int timeBonus = (int)((30.0f - timeTaken) * 5);
+            int totalBonus = (timeBonus > 0 ? timeBonus : 0) + (MAX_TRIES - game->tries) * 20;
+            DrawText(TextFormat("Score: +%d", totalBonus), startX, 365, 20, successColor);
+        }
+
+        Rectangle btnMenu = { startX, 405, 120, 35 };
+        Rectangle btnPlay = { startX + 130, 405, 150, 35 };
+        if (DrawModernButton(btnMenu, "MENU", mousePoint)) game->screen = SCREEN_MENU;
+        if (DrawModernButton(btnPlay, "PLAY AGAIN", mousePoint)) StartSession(game);
+    } else {
+        Rectangle btnBack = { 20, 20, 100, 40 };
+        Rectangle btnReset = { 20, 70, 100, 40 };
+        Rectangle btnPause = { 20, 120, 100, 40 };
+        
+        if (DrawModernButton(btnBack, "< MENU", mousePoint)) {
+            game->screen = SCREEN_MENU;
+        }
+        if (DrawModernButton(btnReset, "RESET", mousePoint)) {
+            StartSession(game);
+        }
+        if (DrawModernButton(btnPause, game->isPaused ? "RESUME" : "PAUSE", mousePoint)) {
+            game->isPaused = !game->isPaused;
+            if (game->isPaused) {
+                game->pauseStartTime = GetTime();
+            } else {
+                game->totalPausedTime += (GetTime() - game->pauseStartTime);
+            }
+        }
+        
+        if (game->isPaused) {
+            int textW = MeasureText("PAUSED", 60);
+            Rectangle pauseRect = { 400 - textW/2 - 30, 200 - 15, textW + 60, 90 };
+            DrawRectangleRounded(pauseRect, 0.2f, 10, WHITE);
+            DrawText("PAUSED", 400 - textW/2, 200, 60, BLACK);
+        }
+    }
+}
+
 void UpdateAndDraw(GameState* game) {
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
     
-    // Logical resolution (the base design format)
-    float gameWidth = 800.0f;
-    float gameHeight = 450.0f;
-    
-    // Calculate scaling to perfectly fit window
-    float scale = (float)screenWidth / gameWidth;
-    if ((float)screenHeight / gameHeight < scale) scale = (float)screenHeight / gameHeight;
+    float scale = (float)screenWidth / BASE_WIDTH;
+    if ((float)screenHeight / BASE_HEIGHT < scale) scale = (float)screenHeight / BASE_HEIGHT;
     
     Camera2D camera = { 0 };
-    camera.offset = (Vector2){ (screenWidth - gameWidth * scale) * 0.5f, (screenHeight - gameHeight * scale) * 0.5f };
+    camera.offset = (Vector2){ (screenWidth - BASE_WIDTH * scale) * 0.5f, (screenHeight - BASE_HEIGHT * scale) * 0.5f };
     camera.target = (Vector2){ 0, 0 };
     camera.rotation = 0.0f;
     camera.zoom = scale;
 
-    // Convert screen mouse to virtual scaled world coordinates
     Vector2 mousePoint = GetScreenToWorld2D(GetMousePosition(), camera);
 
     BeginDrawing();
     ClearBackground(bgDark);
-    
-    // Start drawing inside the scalable camera scope
     BeginMode2D(camera);
 
-    if (game->screen == SCREEN_MENU) {
-        int titleW = MeasureText("HANGMAN", 60);
-        DrawText("HANGMAN", 400 - titleW/2, 100, 60, primaryColor);
-        
-        int subtitleW = MeasureText("Modern Edition", 20);
-        DrawText("Modern Edition", 400 - subtitleW/2, 170, 20, textLight);
-
-        Rectangle btnStart = { 400 - 100, 240, 200, 50 };
-        if (DrawModernButton(btnStart, "START GAME", mousePoint)) {
-            StartSession(game);
-            game->screen = SCREEN_PLAYING;
-        }
-
-        Rectangle btnLevel = { 400 - 100, 310, 200, 50 };
-        if (DrawModernButton(btnLevel, "LEVELS", mousePoint)) {
-            game->screen = SCREEN_LEVEL;
-        }
-
-    } else if (game->screen == SCREEN_LEVEL) {
-        int titleW = MeasureText("SELECT DIFFICULTY", 40);
-        DrawText("SELECT DIFFICULTY", 400 - titleW/2, 80, 40, textLight);
-
-        Rectangle btnEasy = { 400 - 100, 160, 200, 50 };
-        Rectangle btnMed = { 400 - 100, 230, 200, 50 };
-        Rectangle btnHard = { 400 - 100, 300, 200, 50 };
-        Rectangle btnBack = { 400 - 100, 380, 200, 50 };
-
-        if (DrawModernButton(btnEasy, game->difficulty == LEVEL_EASY ? "EASY (Selected)" : "EASY", mousePoint)) game->difficulty = LEVEL_EASY;
-        if (DrawModernButton(btnMed, game->difficulty == LEVEL_MEDIUM ? "MEDIUM (Selected)" : "MEDIUM", mousePoint)) game->difficulty = LEVEL_MEDIUM;
-        if (DrawModernButton(btnHard, game->difficulty == LEVEL_HARD ? "HARD (Selected)" : "HARD", mousePoint)) game->difficulty = LEVEL_HARD;
-        
-        if (DrawModernButton(btnBack, "BACK TO MENU", mousePoint)) {
-            game->screen = SCREEN_MENU;
-        }
-    } else if (game->screen == SCREEN_PLAYING) {
-        
-        // --- GAME LOGIC ---
-        if (!game->gameOver && !game->gameWon) {
-            int key = GetKeyPressed();
-            if (key >= KEY_A && key <= KEY_Z) {
-                char guess = tolower((char)key);
-                if (!game->guessedLetters[guess - 'a']) {
-                    game->guessedLetters[guess - 'a'] = true;
-                    bool found = false;
-                    for (int i = 0; i < game->wordLength; i++) {
-                        if (game->secretWord[i] == guess) {
-                            found = true;
-                            game->guessedWord[i] = guess;
-                        }
-                    }
-                    if (!found) game->tries++;
-                    if (strcmp(game->secretWord, game->guessedWord) == 0) game->gameWon = true;
-                    if (game->tries >= MAX_TRIES) game->gameOver = true;
-                }
-            }
-        }
-
-        // --- DRAW HANGMAN (Modern thick graphics) ---
-        DrawLineEx((Vector2){150, 100}, (Vector2){150, 350}, 6, drawColor); // Post
-        DrawLineEx((Vector2){147, 100}, (Vector2){300, 100}, 6, drawColor); // Top bar
-        DrawLineEx((Vector2){300, 97}, (Vector2){300, 140}, 6, drawColor);  // Rope
-        
-        if (game->tries > 0) DrawCircle(300, 170, 30, errorColor); // Head
-        if (game->tries > 0) DrawCircle(300, 170, 24, bgDark); // Inner Head (makes it hollow)
-        if (game->tries > 1) DrawLineEx((Vector2){300, 200}, (Vector2){300, 280}, 6, errorColor); // Body
-        if (game->tries > 2) DrawLineEx((Vector2){300, 220}, (Vector2){250, 260}, 6, errorColor); // Left Arm
-        if (game->tries > 3) DrawLineEx((Vector2){300, 220}, (Vector2){350, 260}, 6, errorColor); // Right Arm
-        if (game->tries > 4) DrawLineEx((Vector2){300, 280}, (Vector2){250, 330}, 6, errorColor); // Left Leg
-        if (game->tries > 5) DrawLineEx((Vector2){300, 280}, (Vector2){350, 330}, 6, errorColor); // Right Leg
-
-        // Draw Word & Blanks
-        int startX = 400;
-        for (int i = 0; i < game->wordLength; i++) {
-            if (game->guessedWord[i] != '\0') {
-                DrawText(TextFormat("%c", toupper(game->guessedWord[i])), startX + i * 40, 260, 40, primaryColor);
-            }
-            DrawLineEx((Vector2){startX + i*40, 305}, (Vector2){startX + 30 + i*40, 305}, 4, textLight);
-        }
-
-        // Draw Hint
-        DrawText("HINT:", 400, 100, 20, primaryColor);
-        DrawText(game->hint, 400, 130, 20, textLight);
-
-        // Draw Guessed Letters
-        DrawText("GUESSED:", 400, 180, 20, drawColor);
-        int gx = 400; int gy = 210;
-        for(int i = 0; i < 26; i++){
-            if(game->guessedLetters[i]){
-                DrawText(TextFormat("%c", 'A' + i), gx, gy, 20, errorColor);
-                gx += 25;
-                if (gx > 700) { gx = 400; gy += 25; }
-            }
-        }
-
-        // UI Ends States
-        if (game->gameOver || game->gameWon) {
-            if (game->gameOver) {
-                DrawText("GAME OVER!", startX, 335, 30, errorColor);
-                DrawText(TextFormat("Answer: %s", game->secretWord), startX, 375, 20, textLight);
-            } else {
-                DrawText("YOU WON!", startX, 335, 30, successColor);
-            }
-
-            Rectangle btnMenu = { startX, 405, 120, 35 };
-            Rectangle btnPlay = { startX + 130, 405, 150, 35 };
-            if (DrawModernButton(btnMenu, "MENU", mousePoint)) game->screen = SCREEN_MENU;
-            if (DrawModernButton(btnPlay, "PLAY AGAIN", mousePoint)) StartSession(game);
-        } else {
-            Rectangle btnBack = { 20, 20, 120, 40 };
-            if (DrawModernButton(btnBack, "< MENU", mousePoint)) {
-                game->screen = SCREEN_MENU;
-            }
-        }
+    switch(game->screen) {
+        case SCREEN_MENU:
+            DrawMenuScreen(game, mousePoint);
+            break;
+        case SCREEN_LEVEL:
+            DrawLevelScreen(game, mousePoint);
+            break;
+        case SCREEN_PLAYING:
+            DrawPlayingScreen(game, mousePoint);
+            break;
     }
 
     EndMode2D();
@@ -265,24 +433,22 @@ void CleanupGame(GameState* game) {
     }
 }
 
-int main(void)
-{
-    // Make default window much larger
+int main(void) {
     const int screenWidth = 1024;
     const int screenHeight = 768;
     
-    // EXTREMELY IMPORTANT: Allow the window to be resizable/maximized!
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
-    
     InitWindow(screenWidth, screenHeight, "Hangman - Modern UI Edition");
-    SetWindowMinSize(800, 450); // Prevent shrinking below original base res
-    
+    SetWindowMinSize(800, 450);
     SetTargetFPS(60);
 
     GameState* game = InitGame();
+    if (!game) {
+        CloseWindow();
+        return 1;
+    }
 
-    while (!WindowShouldClose())
-    {
+    while (!WindowShouldClose()) {
         UpdateAndDraw(game);
     }
 
