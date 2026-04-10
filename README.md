@@ -1,10 +1,10 @@
-﻿# 🎮 Hangman Game (Modern Desktop Edition - C & Raylib)
+# ?? Hangman Game (Modern Desktop Edition - C & Raylib)
 
 ![C](https://img.shields.io/badge/c-%2300599C.svg?style=for-the-badge&logo=c&logoColor=white) ![Raylib](https://img.shields.io/badge/raylib-000000?style=for-the-badge&logo=raylib&logoColor=white) ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 
 A modern, visually appealing take on the classic **Hangman** game, built entirely in **C** using the **Raylib** library for graphics. This project bridges pure algorithmic logic (strict C99) with real-time responsive UI/UX.
 
-## 📝 Project Description
+## ?? Project Description
 
 This project was developed to demonstrate strong fundamentals in C programming while delivering an engaging desktop application. 
 Instead of a simple console application, this version uses hardware-accelerated rendering to provide:
@@ -13,19 +13,19 @@ Instead of a simple console application, this version uses hardware-accelerated 
 - **Strict Memory Management**: Zero memory leaks. Clean allocation (malloc, calloc) and deallocation (ree) of game states.
 - **Clean Architecture**: Separation of game logic (state management) and rendering logic.
 
-## 📸 Screenshots
+## ?? Screenshots
 
 *(Replace these placeholder links with actual screenshots of your game once uploaded to GitHub)*
 
 | Main Menu | Gameplay |
 | :---: | :---: |
-| <img src="https://via.placeholder.com/400x300.png?text=Main+Menu+Screenshot" alt="Main Menu" width="400"/> | <img src="https://via.placeholder.com/400x300.png?text=Gameplay+Screenshot" alt="Gameplay" width="400"/> |
+| <img src="assets/main_menu.png" alt="Main Menu" width="400"/> | <img src="assets/hg_gameplay.png" alt="Gameplay" width="400"/> |
 
 | Game Over | Victory |
 | :---: | :---: |
-| <img src="https://via.placeholder.com/400x300.png?text=Game+Over+Screenshot" alt="Game Over" width="400"/> | <img src="https://via.placeholder.com/400x300.png?text=Victory+Screenshot" alt="Victory" width="400"/> |
+| <img src="assets/hg_game_over.png" alt="Game Over" width="400"/> | <img src="assets/hg_victory.png" alt="Victory" width="400"/> |
 
-## 🚀 How to Run (Windows)
+## ?? How to Run (Windows)
 
 ### Prerequisites
 - **GCC Compiler** (MinGW) installed on your system.
@@ -52,9 +52,10 @@ Once compiled successfully, launch the game:
 .\hangman.exe
 \\\
 
-## 🛠️ Built With
+## ??? Built With
 - **[C (C99)](https://en.wikipedia.org/wiki/C99)** - The core programming language.
 - **[Raylib 5.0](https://www.raylib.com/)** - A simple and easy-to-use library to enjoy videogames programming.
 
-## 👤 Author
+## ?? Author
 Developed as a programming mini-project.
+
